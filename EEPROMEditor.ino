@@ -165,15 +165,36 @@ CLI_COMMAND(setit) {
         return 10;
     }
 
-    int addr = strtoul(argv[1], NULL, 0);
-    int val = strtoul(argv[2], NULL, 0);
+    int addr = 0;
 
-    if (addr > 255) {
+    if (argv[1][0] == '0' && argv[1][1] == 'x') { // Hex
+        addr = strtoul(argv[1]+2, NULL, 16);
+    } else if (argv[1][0] == '0' && argv[1][1] == 'b') { // Binary
+        addr = strtoul(argv[1]+2, NULL, 2);
+    } else if (argv[1][0] == '\'') { // ASCII
+        addr = argv[1][1];
+    } else {
+        addr = strtoul(argv[1]+2, NULL, 10); // Decimal
+    }
+
+    int val = 0;
+
+    if (argv[2][0] == '0' && argv[2][1] == 'x') { // Hex
+        val = strtoul(argv[2]+2, NULL, 16);
+    } else if (argv[2][0] == '0' && argv[2][1] == 'b') { // Binary
+        val = strtoul(argv[2]+2, NULL, 2);
+    } else if (argv[2][0] == '\'') { // ASCII
+        val = argv[2][1];
+    } else {
+        val = strtoul(argv[2]+2, NULL, 10); // Decimal
+    }
+
+    if (addr > 255 || addr < 0) {
         dev->println("Error: Address out of range");
         return 10;
     }
 
-    if (val > 255) {
+    if (val > 255 || val < 0) {
         dev->println("Error: Value out of range");
         return 10;
     }

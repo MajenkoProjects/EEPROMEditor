@@ -10,6 +10,7 @@ EEPROM24 eeprom(dtwi, 0x50, 256);
 uint8_t buffer[256];
 
 #define VOLSIZ 131072
+//const uint32_t __attribute__((aligned(4096), section(".romdata"))) flashVol[VOLSIZ/4] = {0};
 const uint32_t __attribute__((aligned(4096))) flashVol[VOLSIZ/4] = {0};
 FLASHVOL vol(flashVol, VOLSIZ/512);
 
@@ -159,34 +160,46 @@ CLI_COMMAND(saveit) {
     return 0;
 }
 
+int parseParameter(const char *str) {
+    if ((str[0] == '^') && (strlen(str) > 1)) {
+        return (int)str[1];
+    }
+
+    if ((strncasecmp(str, "0x", 2) == 0) && (strlen(str) > 2)){
+        return strtoul(str+2, NULL, 16);
+    }
+
+    if ((strncasecmp(str, "0b", 2) == 0) && (strlen(str) > 2)){
+        return strtoul(str+2, NULL, 2);
+    }
+
+    if (str[0] == '0') {
+        return strtoul(str, NULL, 8);        
+    }
+
+    if ((str[0] >= '1') && (str[0] <= '9')) {
+        return strtoul(str, NULL, 10);
+    }
+    return -1;
+}
+
 CLI_COMMAND(setit) {
     if (argc != 3) {
         dev->println("Usage: set <address> <value>");
         return 10;
     }
 
-    int addr = 0;
+    int addr = parseParameter(argv[1]);
+    int val = parseParameter(argv[2]);
 
-    if (argv[1][0] == '0' && argv[1][1] == 'x') { // Hex
-        addr = strtoul(argv[1]+2, NULL, 16);
-    } else if (argv[1][0] == '0' && argv[1][1] == 'b') { // Binary
-        addr = strtoul(argv[1]+2, NULL, 2);
-    } else if (argv[1][0] == '\'') { // ASCII
-        addr = argv[1][1];
-    } else {
-        addr = strtoul(argv[1]+2, NULL, 10); // Decimal
+    if (addr < 0) {
+        dev->printf("Error parsing %s as a number\r\n", argv[1]);
+        return 10;
     }
 
-    int val = 0;
-
-    if (argv[2][0] == '0' && argv[2][1] == 'x') { // Hex
-        val = strtoul(argv[2]+2, NULL, 16);
-    } else if (argv[2][0] == '0' && argv[2][1] == 'b') { // Binary
-        val = strtoul(argv[2]+2, NULL, 2);
-    } else if (argv[2][0] == '\'') { // ASCII
-        val = argv[2][1];
-    } else {
-        val = strtoul(argv[2]+2, NULL, 10); // Decimal
+    if (val < 0) {
+        dev->printf("Error parsing %s as a number\r\n", argv[2]);
+        return 10;
     }
 
     if (addr > 255 || addr < 0) {
@@ -247,8 +260,10 @@ CLI_COMMAND(listit) {
 }
 
 void setup() {
+
+    srand(analogRead(0) ^ analogRead(0) ^ analogRead(0) ^ analogRead(0));
     if (DFATFS::fsmount(vol, DFATFS::szFatFsVols[0], 1) != FR_OK) {
-        DFATFS::fsmkfs(vol);
+        DFATFS::fsmkfs(vol, 0xDEADBEEF);
         DFATFS::fsmount(vol, DFATFS::szFatFsVols[0], 1);
         DFILE f;
         f.fsopen("allzero.dat", FA_CREATE_ALWAYS | FA_WRITE | FA_READ);

@@ -193,12 +193,12 @@ CLI_COMMAND(setit) {
     int val = parseParameter(argv[2]);
 
     if (addr < 0) {
-        dev->printf("Error parsing %s as a number\r\n", argv[1]);
+        dev->printf("Error: %s is not understandable\r\n", argv[1]);
         return 10;
     }
 
     if (val < 0) {
-        dev->printf("Error parsing %s as a number\r\n", argv[2]);
+        dev->printf("Error: %s is not understandable\r\n", argv[2]);
         return 10;
     }
 
